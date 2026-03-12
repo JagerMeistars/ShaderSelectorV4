@@ -1,103 +1,152 @@
-# ShaderSelectorV3
- An easy framework for sending information to post processing shaders using commands in Minecraft.
+# ShaderSelector V4
+
+An easy framework for sending information to post processing shaders using commands in Minecraft.
 
 ## What is this used for?
- The attached resource pack includes not only a framework for letting commands communicate with post processing shaders, but also a simple example of how to use that to do cool things.
 
- Here is a video showcasing these demonstration features:
+This resource pack includes a framework that lets commands communicate with post processing shaders, along with a simple example demonstrating how to use it.
 
- https://github.com/user-attachments/assets/f54763f8-35a4-4a24-a893-06ca752d109a
+Here is a video showcasing the demonstration features:
 
- If you want to try it out yourself, install the resource pack and run one of these commands:
- ```hs
+https://github.com/user-attachments/assets/f54763f8-35a4-4a24-a893-06ca752d109a
+
+If you want to try it out yourself, install the resource pack and run one of these commands:
+
+```mcfunction
 # Turn on greyscale
-/particle minecraft:entity_effect{color:[0.996078431372549, 0.9921568627450981, 1.0, 0.984313725490196],scale:1f}
-# Turn off greyscale
-/particle minecraft:entity_effect{color:[0.996078431372549, 0.9921568627450981, 0.0, 0.984313725490196],scale:1f}
-# Rotate screen by 90°
-/particle minecraft:entity_effect{color:[0.996078431372549, 0.9882352941176471, 0.25098039215686274, 0.984313725490196],scale:1f}
-# Rotate screen back to normal
-/particle minecraft:entity_effect{color:[0.996078431372549, 0.9882352941176471, 0.0, 0.984313725490196],scale:1f}
- ```
+/particle entity_effect{color:-67174913} ~ ~1 ~
 
- The good thing about everything being controlled through particles is that the `/particle` command has an argument that lets you determine which players are able to see a particle.
+# Turn off greyscale
+/particle entity_effect{color:-67175168} ~ ~1 ~
+
+# Rotate screen by 90° (instant)
+/particle entity_effect{color:-67175616} ~ ~1 ~
+
+# Rotate screen back to normal (instant)
+/particle entity_effect{color:-67175680} ~ ~1 ~
+
+# Rotate screen to 180° (smooth with acceleration)
+/particle entity_effect{color:-67175296} ~ ~1 ~
+
+# Rotate screen back to normal (smooth)
+/particle entity_effect{color:-67175424} ~ ~1 ~
+```
+
+The good thing about everything being controlled through particles is that the `/particle` command has an argument that lets you determine which players are able to see a particle.
+
+> For a detailed guide (in Russian) on how everything works and how to write your own effects, see [GUIDE.md](GUIDE.md).
 
 ## How does this work?
- At its core, this framework is structured around a data buffer that is defined in the `transparency` post effect pipeline. This buffer saves the inputs that are given using commands, and processes them to create an output. How many channels there are and how they are used can be changed, but in the given example, this data buffer looks like this:
- ![data_layout](https://github.com/user-attachments/assets/edb2b5a3-786d-476a-98f0-8d0ae54f211c)
 
- In this, each row is responsible for one "channel" which is in control of one effect. Within a row that handles a channel, each column has its own responsibility:
- * Column 0 (input) saves the last input that was received from a command. This includes:
-   * Whether there has been an input on this channel since the buffer was created (red component)
-   * The operation applied by the input (green component)
-   * The target value of the input (blue component)
- * Column 1 (startTime) captures the value of GameTime (in seconds) from the last moment when the target value changed on the same channel.\
- This time is clamped to always be at most 600 seconds behind the current GameTime, to avoid overflow.
- * Column 2 and 3 (acceleration and speed) are used internally to manage the smooth interpolation of the output value.
- * Column 4 (output) contains a value that changes to move closer to the target value that was given in the last input. What this movement looks like depends on the operation applied by the last input.
-  
- In this, column 1 to 4 each store a single 32-bit float that has its bits split between the components of the color that is stored on the pixel. To get the single value that is represented by the color of a pixel, you can use the `decodeColor(vec4 color)` function that is defined in the `shader_selector:utils.glsl` include file.
+At its core, this framework is structured around a persistent data buffer defined in the `transparency` post effect pipeline. This buffer saves inputs given through commands and processes them to produce interpolated output values. The number of channels and how they are used can be changed, but in the given example the data buffer looks like this:
 
- The output of a channel will also be referred to as the "value" of that channel.
+```
+Column:      0              1              2              3              4
+          ┌──────────┬──────────────┬──────────────┬──────────────┬──────────────┐
+Row 0:    │ GameTime │              │              │              │              │
+          ├──────────┼──────────────┼──────────────┼──────────────┼──────────────┤
+Row 1:    │ Input    │ Start time   │ Acceleration │ Speed        │ Value        │  (channel 1: greyscale)
+          ├──────────┼──────────────┼──────────────┼──────────────┼──────────────┤
+Row 2:    │ Input    │ Start time   │ Acceleration │ Speed        │ Value        │  (channel 2: rotation)
+          └──────────┴──────────────┴──────────────┴──────────────┴──────────────┘
+```
 
- For example, the given resource pack uses the following instruction to be able to read the interpolated output (column 4) from channel 2 inside the `shader.fsh` post shader:
- ```glsl
- float rotationChannel = decodeColor(texelFetch(DataSampler, ivec2(4, 2), 0));
- ```
+Each row is responsible for one "channel" which controls one effect. Within a row:
+
+* **Column 0 (input)** — saves the last received input: whether there has been an input (red), the operation (green), and the target value (blue).
+* **Column 1 (startTime)** — captures the GameTime (in seconds) from when the target value last changed on this channel.
+* **Columns 2 and 3 (acceleration and speed)** — used internally to manage smooth interpolation of the output value.
+* **Column 4 (output)** — the interpolated value that moves toward the target. How it moves depends on the operation.
+
+Columns 1–4 each store a single 32-bit float with bits split across the RGBA components. Use `decodeColor(vec4 color)` from `shader_selector:utils.glsl` to read them, or the convenience function `readChannel(int channel)` from `shader_selector:data_reader.glsl`:
+
+```glsl
+float greyscale = readChannel(EXAMPLE_GREYSCALE_CHANNEL); // 0.0 – 1.0
+float rotation = readChannel(EXAMPLE_ROTATION_CHANNEL);   // 0.0 – 1.0
+```
 
 ### How is a new channel defined?
- In principle, all that a channel needs is to have space on the data buffer. The size of the data buffer (as well as the `data_swap` buffer, which is used internally and should always have the same size as the `data` buffer) is set in the buffers' definitions in the `targets` list of the `assets/minecraft/post_effect/transparency.json` file.
- 
- In the given example, there are 2 channels as well as the internally used `GameTime` row, making for a total of 3 rows. That's why it says `"height": 3` in both the definition of the targets `data` and `data_swap`.
+
+All a channel needs is space on the data buffer. The buffer size is set in the `targets` list of `assets/minecraft/post_effect/transparency.json`. In the example there are 2 channels plus the internal GameTime row, so `"height": 3` for both `data` and `data_swap` targets.
+
+To add a channel:
+
+1. In `marker_settings.glsl`, define a channel constant and add markers to `LIST_MARKERS`.
+2. In `transparency.json`, increase `height` of `data` and `data_swap`.
+3. In your shader, read the value with `readChannel(MY_CHANNEL)`.
 
 ### How do I give an input to a channel?
- When a particle is recognized as an input that is sent to the post shader, I will call it a "marker particle". A marker particle is identified by a core shader based on its color, and will be sent to and read by the post shader.
 
- Which particle colors are recognized as marker particles, as well as which channel they target and other information is all defined in `assets/shader_selector/shaders/include/marker_settings.glsl`.
+A "marker particle" is a particle whose color is recognized by the core shader, which then sends it to the post shader. Marker definitions live in `assets/shader_selector/shaders/include/marker_settings.glsl`.
 
- A marker is then defined by adding it to the ´LIST_MARKERS´ macro as `ADD_MARKER(<channel>, <wanted green component>, <wanted alpha component>, <operation>, <interpolation rate>)`.
+A marker is defined by adding it to the `LIST_MARKERS` macro:
 
- With this, a particle that has the color `(MARKER_RED, <wanted green component>, <any blue value>, <wanted alpha component>)/255` will then be recognized as a marker particle that applies the instructions that are given in the `ADD_MARKER` statement to the specified channel. \
- `MARKER_RED` remains constant throughout all markers and should preferably not be changed.
+```glsl
+ADD_MARKER(<channel>, <green>, <alpha>, <operation>, <rate>)
+```
 
- The chosen blue value that the particle is displayed with will then be the "target value" that is written to the data buffer.
+A particle with the color `(MARKER_RED, <green>, <any blue value>, <alpha>)` will be recognized as a marker targeting the specified channel. `MARKER_RED` (254) is constant across all markers.
 
- The arguments of the `ADD_MARKER` function have the following meaning:
- * `<channel>`: The channel that is written to when the marker is detected.
- * `<wanted green/alpha component>`: A particle is only recognized as this marker if its green and alpha components match the given values.
- * `<operation>`: Changes the mode of how the value of the channel on the data buffer will follow the target value that is given in the particle's blue component.\
-   Valid operations are:
-    * `0`: Set value to input. Set speed to 0.
-    * `1`: Interpolate value to follow the target value at a constant rate, given by `<rate>`.
-    * `2`: Interpolate by the same method as operation `1`, but use overflow to pick the shortest path from the current value to the target value.
-    * `3`: Interpolate value to follow the target value at a constant acceleration given by `<rate>`. 
-    * `4`: Interpolate by the same method as operation `3`, but use overflow to pick the shortest path from the current value to the target value.
-  * `<rate>`:
-    * If `<operation>` is `1` or `2`, `<rate>` gives the rate of change of the value in `units/second`.
-    * If `<operation>` is `3` or `4`, `<rate>` gives the acceleration of the change of the value in `units/second²`.
- 
- In this, what is meant by "overflow" needs some further explanation:
+The blue value of the particle becomes the "target value" written to the data buffer.
 
- When I say that an operation uses overflow, that simply means that the value is set to wrap back to 0 when it goes above 1, and vice versa. So to get from 0.9 to 0.1, you can simply add 0.2, which is a shorter path than subtracting 0.8.
+**The particle must use `entity_effect`** because it requires control over all 4 RGBA channels (including alpha). The color is specified as a packed ARGB integer:
 
- A peculiarity that this introduces is that under this mapping, 0 is the same value as 1, and the value that normally represents 1, namely 255/255, would become redundant. That's why, when using an operation that uses overflow, the target value is no longer interpreted on a scale from 0/255 to 255/255, but instead, from 0/256 to 255/256. This has the effect that a marker that uses overflow operations will be able to target values like `0.5=128/256` or `0.25=64/256` with perfect precision, while other operations can only approximate them, as `127/255≈0.498` and `128/255≈0.502`. But this also has the effect that the color code that you enter into the particle will be slightly different from the target value that this is interpreted as. This results in the rule:
+```
+ARGB = -67239936 + green * 256 + value
+```
 
- When using an operation that uses overflow and you want to target the value `x`, set the marker particle to have a blue component of `x*256/255`.
+For example, to set greyscale (green=253) to 100% (value=255):
+```
+ARGB = -67239936 + 253 * 256 + 255 = -67174913
+/particle entity_effect{color:-67174913} ~ ~1 ~
+```
+
+### Operations
+
+The `<operation>` parameter controls how the channel's value follows the target:
+
+| Op | Name | Behavior | Rate parameter |
+|----|------|----------|----------------|
+| 0 | Set | Instant. Speed reset to 0 | Not used (0.0) |
+| 1 | Constant velocity | Linear motion toward target | Speed (units/second) |
+| 2 | Cyclic constant velocity | Like 1, but wraps 0.0–1.0 via shortest path | Speed |
+| 3 | Accelerated motion | Smooth acceleration/deceleration toward target | Acceleration (units/second²) |
+| 4 | Cyclic accelerated | Like 3, but wraps 0.0–1.0 via shortest path | Acceleration |
+
+**Overflow (cyclic operations):** Values wrap from 1.0 back to 0.0. To go from 0.9 to 0.1, the value adds 0.2 (wrapping through 1.0) rather than subtracting 0.8. Under overflow, the target is interpreted as `blue/256` instead of `blue/255`, so values like 0.5 (128/256) are represented exactly.
+
+## Quick reference
+
+### Example markers (from default config)
+
+| Effect | green | op | rate | ARGB formula |
+|--------|-------|----|------|--------------|
+| Greyscale (smooth) | 253 | 1 | 0.1 | `-67175168 + value` |
+| Rotation (instant) | 251 | 0 | 0.0 | `-67175680 + value` |
+| Rotation (smooth cyclic) | 252 | 4 | 0.4 | `-67175424 + value` |
+
+### Ready-to-use commands
+
+| Action | Command |
+|--------|---------|
+| Greyscale ON | `particle entity_effect{color:-67174913} ~ ~1 ~` |
+| Greyscale OFF | `particle entity_effect{color:-67175168} ~ ~1 ~` |
+| Greyscale 50% | `particle entity_effect{color:-67175040} ~ ~1 ~` |
+| Rotation SET 0° | `particle entity_effect{color:-67175680} ~ ~1 ~` |
+| Rotation SET 90° | `particle entity_effect{color:-67175616} ~ ~1 ~` |
+| Rotation SET 180° | `particle entity_effect{color:-67175552} ~ ~1 ~` |
+| Rotation SMOOTH 180° | `particle entity_effect{color:-67175296} ~ ~1 ~` |
+| Rotation SMOOTH 0° | `particle entity_effect{color:-67175424} ~ ~1 ~` |
 
 ## History
 
-This framework is based on a [previous version](https://github.com/HalbFettKaese/common-shaders) that was used in an earlier project. That version had been extracted into its own repository and popularized by [CloudWolfYT](https://github.com/CloudWolfYT) to create [ShaderSelectorV2](https://github.com/CloudWolfYT/ShaderSelectorV2), and the current repository, ShaderSelectorV3, is a complete rewrite that includes some notable changes:
-* ShaderSelectorV2 was using the post shader format from before Minecraft 1.21.2, while V3 was developed in 24w38a (a 1.21.2 snapshot).
+This framework is based on a [previous version](https://github.com/HalbFettKaese/ShaderSelectorV3). That version had been extracted into its own repository and popularized by [CloudWolfYT](https://github.com/CloudWolfYT) to create [ShaderSelectorV2](https://github.com/CloudWolfYT/ShaderSelectorV2). ShaderSelectorV3 was a complete rewrite, and V4 continues with these notable changes across versions:
+
+* V2 used the post shader format from before Minecraft 1.21.2; V3 was developed in 24w38a (a 1.21.2 snapshot); V4 targets 26.1.
 * The data sampler has a changed layout.
-* Interpolation counts in real time instead of frames (`rate` is in `1/seconds` instead of `1/frames`).
+* Interpolation counts in real time instead of frames (`rate` is in `units/second` instead of `units/frame`).
 * Every channel saves how much time passed since its target value was last changed.
-* Apart from the previous interpolation that only used constant motion, there's a new interpolation mode that uses smoothly accelerated motion.
-* Interpolation can be set to use overflow (so to get from 0.1 to 0.9, it goes 0.1-0.2=0.9 instead of 0.1+0.8=0.9).
-* Adding/editing a channel needs you to only change a single config file (`assets/shader_selector/include/marker_settings.glsl`) and change the height of the data buffer (`assets/minecraft/post_effect/transparency.json`) to accommodate the new channel.
-
-## Credits
-
-This resource pack was created by me on my own and has been improved with the help of the listed contributors. However, many of the added features have been inspired by different interactions with people who were using the previous versions of this resource pack, so I want to thank them as well as everyone else who has been using and sharing it in the past or in the future.
-
-If you want to thank me for my work, please consider making a small donation.\
-[![Donate](https://img.shields.io/badge/Donate-Ko--fi-green.svg)](https://ko-fi.com/halbfettkaese)
+* Apart from constant-rate interpolation, there is accelerated motion interpolation.
+* Interpolation can use overflow (cyclic wrapping) for shortest-path transitions.
+* Adding/editing a channel only requires changing `marker_settings.glsl` and adjusting the data buffer height in `transparency.json`.
+* Added `readChannel()` convenience function via `data_reader.glsl`.
