@@ -750,3 +750,4 @@ void main() {
 /particle entity_effect{color:-67175296} ~ ~1 ~    <- smooth rotation 180°
 /particle entity_effect{color:-67175424} ~ ~1 ~    <- smooth rotation 0°
 ```
+
