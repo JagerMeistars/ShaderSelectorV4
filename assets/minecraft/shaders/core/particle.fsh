@@ -15,11 +15,17 @@ out vec4 fragColor;
 // ShaderSelector
 flat in int isMarker;
 flat in ivec4 iColor;
+flat in ivec2 markerPixel;
 
 void main() {
     // ShaderSelector
     if (isMarker == 1) {
-        fragColor = vec4(iColor.rgb, 255) / 255.0;
+        // Output marker color only at the exact target pixel
+        if (ivec2(gl_FragCoord.xy) == markerPixel) {
+            fragColor = vec4(iColor.rgb, 255) / 255.0;
+        } else {
+            discard;
+        }
         return;
     }
     // Vanilla code
