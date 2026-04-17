@@ -196,28 +196,39 @@ float rotation = readChannel(EXAMPLE_ROTATION_CHANNEL);   // 0.0 – 1.0
 particle entity_effect{color:<ARGB_INT>} <x> <y> <z>
 ```
 
-**Формула ARGB:**
+**Формат ARGB — `0xAARRGGBB`:**
+
+| Байт | Значение | Описание |
+|------|----------|----------|
+| `AA` | `alpha` маркера (hex) | Например, 251 → `0xFB` |
+| `RR` | `0xFE` | Всегда `MARKER_RED` (254) |
+| `GG` | `green` маркера (hex) | Идентификатор маркера |
+| `BB` | Значение 0x00–0xFF | Кодирует 0.0–1.0 |
+
 ```
-ARGB = (A << 24) | (R << 16) | (G << 8) | B
+ARGB = 0xAARRGGBB
 ```
 
-Для наших маркеров (A=251, R=254):
+Для наших маркеров (alpha=251 → `0xFB`, red=254 → `0xFE`):
 ```
-ARGB = (251 << 24) | (254 << 16) | (green << 8) | value
-     = -67175168 + (green - 253) * 256 + value     // для green ≈ 253
+ARGB = 0xFBFE____
+         │ │ │ └── значение (value): 00–FF
+         │ │ └──── green маркера (hex)
+         │ └────── 0xFE (MARKER_RED)
+         └──────── 0xFB (alpha = 251)
 ```
 
 ### Предвычисленные базовые значения
 
-Для удобства — базовые ARGB (без value, т.е. B=0):
+Для удобства — базовые ARGB (без value, т.е. BB=0):
 
 | Маркер | green | Базовый ARGB | Формула с value |
-|--------|-------|-------------|-----------------|
-| Greyscale | 253 | **-67175168** | `-67175168 + value` |
-| Rotation (set) | 251 | **-67175680** | `-67175680 + value` |
-| Rotation (cyclic) | 252 | **-67175424** | `-67175424 + value` |
+|--------|-------|--------------|-----------------|
+| Greyscale | 253 (`0xFD`) | **`0xFBFEFD00`** | `0xFBFEFD00 + value` |
+| Rotation (set) | 251 (`0xFB`) | **`0xFBFEFB00`** | `0xFBFEFB00 + value` |
+| Rotation (cyclic) | 252 (`0xFC`) | **`0xFBFEFC00`** | `0xFBFEFC00 + value` |
 
-> **Как получить:** `-67175168 + value` — просто прибавьте нужное значение (0–255) к базовому числу.
+> **Как получить:** просто подставьте value (0–255 / 0x00–0xFF) в младший байт — например, `0xFBFEFD00 + 0xFF = 0xFBFEFDFF`.
 
 ### Конвертация значений
 
@@ -255,30 +266,30 @@ ARGB = (251 << 24) | (254 << 16) | (green << 8) | value
 
 **Включить (плавно перейти в полный ч/б):**
 ```mcfunction
-# B=255 -> target = 1.0 (100% greyscale)
-# ARGB = -67175168 + 255 = -67174913
-particle entity_effect{color:-67174913} ~ ~1 ~
+# B=0xFF (255) -> target = 1.0 (100% greyscale)
+# ARGB = 0xFBFEFD00 + 0xFF = 0xFBFEFDFF
+particle entity_effect{color:0xFBFEFDFF} ~ ~1 ~
 ```
 
 **Выключить (плавно вернуть цвет):**
 ```mcfunction
-# B=0 -> target = 0.0 (0% greyscale, полный цвет)
-# ARGB = -67175168 + 0 = -67175168
-particle entity_effect{color:-67175168} ~ ~1 ~
+# B=0x00 -> target = 0.0 (0% greyscale, полный цвет)
+# ARGB = 0xFBFEFD00
+particle entity_effect{color:0xFBFEFD00} ~ ~1 ~
 ```
 
 **Установить на 50%:**
 ```mcfunction
-# B=128 -> target ≈ 0.502
-# ARGB = -67175168 + 128 = -67175040
-particle entity_effect{color:-67175040} ~ ~1 ~
+# B=0x80 (128) -> target ≈ 0.502
+# ARGB = 0xFBFEFD00 + 0x80 = 0xFBFEFD80
+particle entity_effect{color:0xFBFEFD80} ~ ~1 ~
 ```
 
 **Установить на 25%:**
 ```mcfunction
-# B=64 -> target ≈ 0.251
-# ARGB = -67175168 + 64 = -67175104
-particle entity_effect{color:-67175104} ~ ~1 ~
+# B=0x40 (64) -> target ≈ 0.251
+# ARGB = 0xFBFEFD00 + 0x40 = 0xFBFEFD40
+particle entity_effect{color:0xFBFEFD40} ~ ~1 ~
 ```
 
 > **Поведение:** Поскольку op=1 (constant velocity) с rate=0.1, значение не скачет мгновенно, а плавно ползет к цели. Скорость перехода фиксирована — неважно, насколько далеко текущее значение от целевого.
@@ -292,30 +303,30 @@ particle entity_effect{color:-67175104} ~ ~1 ~
 
 **Повернуть на 90°:**
 ```mcfunction
-# B=64 -> 64/255 ≈ 0.251 -> 0.251 * 360 ≈ 90°
-# ARGB = -67175680 + 64 = -67175616
-particle entity_effect{color:-67175616} ~ ~1 ~
+# B=0x40 (64) -> 64/255 ≈ 0.251 -> 0.251 * 360 ≈ 90°
+# ARGB = 0xFBFEFB00 + 0x40 = 0xFBFEFB40
+particle entity_effect{color:0xFBFEFB40} ~ ~1 ~
 ```
 
 **Повернуть на 180°:**
 ```mcfunction
-# B=128 -> 128/255 ≈ 0.502 -> ≈ 181°
-# ARGB = -67175680 + 128 = -67175552
-particle entity_effect{color:-67175552} ~ ~1 ~
+# B=0x80 (128) -> 128/255 ≈ 0.502 -> ≈ 181°
+# ARGB = 0xFBFEFB00 + 0x80 = 0xFBFEFB80
+particle entity_effect{color:0xFBFEFB80} ~ ~1 ~
 ```
 
 **Повернуть на 45°:**
 ```mcfunction
-# B=32 -> 32/255 ≈ 0.125 -> ≈ 45°
-# ARGB = -67175680 + 32 = -67175648
-particle entity_effect{color:-67175648} ~ ~1 ~
+# B=0x20 (32) -> 32/255 ≈ 0.125 -> ≈ 45°
+# ARGB = 0xFBFEFB00 + 0x20 = 0xFBFEFB20
+particle entity_effect{color:0xFBFEFB20} ~ ~1 ~
 ```
 
 **Сбросить поворот (0°):**
 ```mcfunction
 # B=0 -> 0°
-# ARGB = -67175680
-particle entity_effect{color:-67175680} ~ ~1 ~
+# ARGB = 0xFBFEFB00
+particle entity_effect{color:0xFBFEFB00} ~ ~1 ~
 ```
 
 > **Поведение:** Экран мгновенно поворачивается на заданный угол. Без плавности — щелчок и готово.
@@ -329,23 +340,23 @@ particle entity_effect{color:-67175680} ~ ~1 ~
 
 **Запустить вращение к 180°:**
 ```mcfunction
-# B=128 -> 128/256 = 0.5 -> 0.5 * 360 = 180°
-# ARGB = -67175424 + 128 = -67175296
-particle entity_effect{color:-67175296} ~ ~1 ~
+# B=0x80 (128) -> 128/256 = 0.5 -> 0.5 * 360 = 180°
+# ARGB = 0xFBFEFC00 + 0x80 = 0xFBFEFC80
+particle entity_effect{color:0xFBFEFC80} ~ ~1 ~
 ```
 
 **Запустить вращение к 270°:**
 ```mcfunction
-# B=192 -> 192/256 = 0.75 -> 270°
-# ARGB = -67175424 + 192 = -67175232
-particle entity_effect{color:-67175232} ~ ~1 ~
+# B=0xC0 (192) -> 192/256 = 0.75 -> 270°
+# ARGB = 0xFBFEFC00 + 0xC0 = 0xFBFEFCC0
+particle entity_effect{color:0xFBFEFCC0} ~ ~1 ~
 ```
 
 **Остановить вращение (вернуть к 0°):**
 ```mcfunction
 # B=0 -> target = 0°
-# ARGB = -67175424
-particle entity_effect{color:-67175424} ~ ~1 ~
+# ARGB = 0xFBFEFC00
+particle entity_effect{color:0xFBFEFC00} ~ ~1 ~
 ```
 
 > **Поведение:** Экран плавно разгоняется и тормозит, приходя к заданному углу. Циклическое — значит при переходе от 350° к 10° он пойдет кратчайшим путем (через 360°/0°), а не обратно через 180°.
@@ -359,25 +370,25 @@ particle entity_effect{color:-67175424} ~ ~1 ~
 **Включить ч/б + повернуть на 45°:**
 ```mcfunction
 # Greyscale на максимум
-particle entity_effect{color:-67174913} ~ ~1 ~
+particle entity_effect{color:0xFBFEFDFF} ~ ~1 ~
 # Поворот на 45° мгновенно
-particle entity_effect{color:-67175648} ~ ~1 ~
+particle entity_effect{color:0xFBFEFB20} ~ ~1 ~
 ```
 
 **Плавный ч/б + плавное вращение к 180°:**
 ```mcfunction
 # Greyscale плавно к 100%
-particle entity_effect{color:-67174913} ~ ~1 ~
+particle entity_effect{color:0xFBFEFDFF} ~ ~1 ~
 # Вращение плавно к 180°
-particle entity_effect{color:-67175296} ~ ~1 ~
+particle entity_effect{color:0xFBFEFC80} ~ ~1 ~
 ```
 
 **Выключить всё:**
 ```mcfunction
 # Greyscale к 0
-particle entity_effect{color:-67175168} ~ ~1 ~
+particle entity_effect{color:0xFBFEFD00} ~ ~1 ~
 # Поворот мгновенно к 0°
-particle entity_effect{color:-67175680} ~ ~1 ~
+particle entity_effect{color:0xFBFEFB00} ~ ~1 ~
 ```
 
 ---
@@ -413,34 +424,34 @@ my_effects_datapack/
 ```mcfunction
 # Включить черно-белый фильтр (плавный переход)
 # Спавним маркер на позиции игрока (чуть выше, чтобы точно попасть на экран)
-execute as @a at @s run particle entity_effect{color:-67174913} ^ ^ ^2
+execute as @a at @s run particle entity_effect{color:0xFBFEFDFF} ^ ^ ^2
 ```
 
 #### `greyscale_off.mcfunction` — Плавно выключить ч/б
 ```mcfunction
 # Выключить черно-белый фильтр (плавный переход обратно)
-execute as @a at @s run particle entity_effect{color:-67175168} ^ ^ ^2
+execute as @a at @s run particle entity_effect{color:0xFBFEFD00} ^ ^ ^2
 ```
 
 #### `spin_start.mcfunction` — Запустить вращение
 ```mcfunction
 # Начать плавное вращение экрана к 180°
-execute as @a at @s run particle entity_effect{color:-67175296} ^ ^ ^2
+execute as @a at @s run particle entity_effect{color:0xFBFEFC80} ^ ^ ^2
 ```
 
 #### `spin_stop.mcfunction` — Остановить вращение
 ```mcfunction
 # Остановить вращение (плавно вернуть к 0°)
 # Сначала циклический маркер к 0
-execute as @a at @s run particle entity_effect{color:-67175424} ^ ^ ^2
+execute as @a at @s run particle entity_effect{color:0xFBFEFC00} ^ ^ ^2
 ```
 
 #### `reset_all.mcfunction` — Сбросить все эффекты
 ```mcfunction
 # Greyscale -> 0 (плавно)
-execute as @a at @s run particle entity_effect{color:-67175168} ^ ^ ^2
+execute as @a at @s run particle entity_effect{color:0xFBFEFD00} ^ ^ ^2
 # Rotation -> 0° (мгновенно)
-execute as @a at @s run particle entity_effect{color:-67175680} ^ ^ ^2
+execute as @a at @s run particle entity_effect{color:0xFBFEFB00} ^ ^ ^2
 ```
 
 #### Использование из чата
@@ -462,8 +473,8 @@ execute as @a at @s run particle entity_effect{color:-67175680} ^ ^ ^2
 # tick.mcfunction — вызывается каждый тик
 # Плавно качаем greyscale на основе времени дня
 execute store result score #time temp run time query daytime
-execute if score #time temp matches 0..6000 as @a at @s run particle entity_effect{color:-67174913} ^ ^ ^2
-execute if score #time temp matches 6001..12000 as @a at @s run particle entity_effect{color:-67175168} ^ ^ ^2
+execute if score #time temp matches 0..6000 as @a at @s run particle entity_effect{color:0xFBFEFDFF} ^ ^ ^2
+execute if score #time temp matches 6001..12000 as @a at @s run particle entity_effect{color:0xFBFEFD00} ^ ^ ^2
 ```
 
 > **Примечание:** Отправка одного и того же маркера с тем же значением повторно — безвредна. Система проверяет, изменилось ли значение B, и если нет — не обновляет таймстемп.
@@ -475,24 +486,29 @@ execute if score #time temp matches 6001..12000 as @a at @s run particle entity_
 Если вы добавили свой маркер и хотите вычислить ARGB:
 
 ```
-ARGB (signed 32-bit) = ((251 - 256) * 16777216) + (254 * 65536) + (green * 256) + value
-                      = -83886080 + 16646144 + green * 256 + value
-                      = -67239936 + green * 256 + value
+ARGB = 0xAARRGGBB
+
+где:
+  AA = alpha маркера (hex, 2 цифры)    напр. 251 → 0xFB
+  RR = 0xFE                             (всегда MARKER_RED = 254)
+  GG = green маркера (hex, 2 цифры)
+  BB = значение       (hex, 2 цифры)    0x00..0xFF
 ```
 
-**Упрощенная формула:**
+**Упрощенная формула (склейкой hex-цифр):**
 ```
-ARGB = -67239936 + green * 256 + value
+ARGB = 0xFBFE << 16 | green << 8 | value
+     = 0xFBFE____    где ____ = green_hex ++ value_hex
 ```
 
 **Примеры:**
-| green | value | ARGB |
-|-------|-------|------|
-| 253 | 0 | -67239936 + 64768 + 0 = **-67175168** |
-| 253 | 255 | -67239936 + 64768 + 255 = **-67174913** |
-| 251 | 0 | -67239936 + 64256 + 0 = **-67175680** |
-| 252 | 128 | -67239936 + 64512 + 128 = **-67175296** |
-| 250 | 100 | -67239936 + 64000 + 100 = **-67175836** |
+| green | value | Hex green | Hex value | ARGB |
+|-------|-------|-----------|-----------|------|
+| 253 | 0   | `0xFD` | `0x00` | **`0xFBFEFD00`** |
+| 253 | 255 | `0xFD` | `0xFF` | **`0xFBFEFDFF`** |
+| 251 | 0   | `0xFB` | `0x00` | **`0xFBFEFB00`** |
+| 252 | 128 | `0xFC` | `0x80` | **`0xFBFEFC80`** |
+| 250 | 100 | `0xFA` | `0x64` | **`0xFBFEFA64`** |
 
 ---
 
@@ -500,23 +516,23 @@ ARGB = -67239936 + green * 256 + value
 
 | Эффект | Действие | green | op | Команда (B=значение) |
 |--------|----------|-------|----|----------------------|
-| Greyscale | Плавно к значению | 253 | 1 | `entity_effect{color:}` где ARGB = `-67175168 + B` |
-| Rotation | Мгновенная установка | 251 | 0 | `entity_effect{color:}` где ARGB = `-67175680 + B` |
-| Rotation | Плавное с ускорением | 252 | 4 | `entity_effect{color:}` где ARGB = `-67175424 + B` |
+| Greyscale | Плавно к значению | 253 | 1 | `entity_effect{color:}` где ARGB = `0xFBFEFD00 + value` |
+| Rotation | Мгновенная установка | 251 | 0 | `entity_effect{color:}` где ARGB = `0xFBFEFB00 + value` |
+| Rotation | Плавное с ускорением | 252 | 4 | `entity_effect{color:}` где ARGB = `0xFBFEFC00 + value` |
 
 **Часто используемые готовые значения:**
 
 | Действие | ARGB | Команда |
 |----------|------|---------|
-| Greyscale ON (100%) | -67174913 | `particle entity_effect{color:-67174913} ^ ^ ^2` |
-| Greyscale OFF (0%) | -67175168 | `particle entity_effect{color:-67175168} ^ ^ ^2` |
-| Greyscale 50% | -67175040 | `particle entity_effect{color:-67175040} ^ ^ ^2` |
-| Rotation SET 0° | -67175680 | `particle entity_effect{color:-67175680} ^ ^ ^2` |
-| Rotation SET 90° | -67175616 | `particle entity_effect{color:-67175616} ^ ^ ^2` |
-| Rotation SET 180° | -67175552 | `particle entity_effect{color:-67175552} ^ ^ ^2` |
-| Rotation SMOOTH 0° | -67175424 | `particle entity_effect{color:-67175424} ^ ^ ^2` |
-| Rotation SMOOTH 90° | -67175360 | `particle entity_effect{color:-67175360} ^ ^ ^2` |
-| Rotation SMOOTH 180° | -67175296 | `particle entity_effect{color:-67175296} ^ ^ ^2` |
+| Greyscale ON (100%) | `0xFBFEFDFF` | `particle entity_effect{color:0xFBFEFDFF} ^ ^ ^2` |
+| Greyscale OFF (0%) | `0xFBFEFD00` | `particle entity_effect{color:0xFBFEFD00} ^ ^ ^2` |
+| Greyscale 50% | `0xFBFEFD80` | `particle entity_effect{color:0xFBFEFD80} ^ ^ ^2` |
+| Rotation SET 0° | `0xFBFEFB00` | `particle entity_effect{color:0xFBFEFB00} ^ ^ ^2` |
+| Rotation SET 90° | `0xFBFEFB40` | `particle entity_effect{color:0xFBFEFB40} ^ ^ ^2` |
+| Rotation SET 180° | `0xFBFEFB80` | `particle entity_effect{color:0xFBFEFB80} ^ ^ ^2` |
+| Rotation SMOOTH 0° | `0xFBFEFC00` | `particle entity_effect{color:0xFBFEFC00} ^ ^ ^2` |
+| Rotation SMOOTH 90° | `0xFBFEFC40` | `particle entity_effect{color:0xFBFEFC40} ^ ^ ^2` |
+| Rotation SMOOTH 180° | `0xFBFEFC80` | `particle entity_effect{color:0xFBFEFC80} ^ ^ ^2` |
 
 ---
 
@@ -612,15 +628,14 @@ void main() {
 ### Шаг 4: Команда для управления новым эффектом
 
 ```mcfunction
-# Включить размытие (green=250)
-# ARGB = -67239936 + 250*256 + 255 = -67175681 + 255...
-# Проще: -67239936 + 64000 + value = -67175936 + value
-# value=255: -67175936 + 255 = -67175681
-execute as @a at @s run particle entity_effect{color:-67175681} ^ ^ ^2
+# Включить размытие (green=250 → 0xFA)
+# ARGB = 0xFBFE << 16 | 0xFA << 8 | value
+# value=255 (0xFF): 0xFBFEFAFF
+execute as @a at @s run particle entity_effect{color:0xFBFEFAFF} ^ ^ ^2
 
 # Выключить размытие
-# value=0: -67175936
-execute as @a at @s run particle entity_effect{color:-67175936} ^ ^ ^2
+# value=0: 0xFBFEFA00
+execute as @a at @s run particle entity_effect{color:0xFBFEFA00} ^ ^ ^2
 ```
 
 > **Совет:** Обратите внимание на `target` в transparency.json — это имена render target'ов. Вход вашего шейдера должен быть выходом предыдущего прохода. Выход — один из определенных target'ов (`final`, `swap`, `swap2`). Последний проход (blit) должен писать в `minecraft:main`.
@@ -715,8 +730,8 @@ void main() {
 1. В `marker_settings.glsl`: определить `#define MY_CHANNEL N` и добавить `ADD_MARKER(...)` в `LIST_MARKERS`
 2. В `transparency.json`: увеличить `height` data-текстур если нужно
 3. В своем шейдере: `float value = readChannel(MY_CHANNEL);`
-4. Вычислить ARGB: `-67239936 + green * 256 + value`
-5. В датапаке: `particle entity_effect{color:<ARGB>} ^ ^ ^2`
+4. Вычислить ARGB: `0xFBFE | (green_hex << 8) | value_hex` → `0xFBFE{GG}{BB}`
+5. В датапаке: `particle entity_effect{color:0xFBFE____} ^ ^ ^2`
 
 ### Минимальный шейдер:
 
@@ -743,11 +758,11 @@ void main() {
 ### Быстрый тест из чата:
 
 ```
-/particle entity_effect{color:-67174913} ~ ~1 ~    <- greyscale ON
-/particle entity_effect{color:-67175168} ~ ~1 ~    <- greyscale OFF
-/particle entity_effect{color:-67175616} ~ ~1 ~    <- rotation 90°
-/particle entity_effect{color:-67175680} ~ ~1 ~    <- rotation 0°
-/particle entity_effect{color:-67175296} ~ ~1 ~    <- smooth rotation 180°
-/particle entity_effect{color:-67175424} ~ ~1 ~    <- smooth rotation 0°
+/particle entity_effect{color:0xFBFEFDFF} ~ ~1 ~    <- greyscale ON
+/particle entity_effect{color:0xFBFEFD00} ~ ~1 ~    <- greyscale OFF
+/particle entity_effect{color:0xFBFEFB40} ~ ~1 ~    <- rotation 90°
+/particle entity_effect{color:0xFBFEFB00} ~ ~1 ~    <- rotation 0°
+/particle entity_effect{color:0xFBFEFC80} ~ ~1 ~    <- smooth rotation 180°
+/particle entity_effect{color:0xFBFEFC00} ~ ~1 ~    <- smooth rotation 0°
 ```
 
