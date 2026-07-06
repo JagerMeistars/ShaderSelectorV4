@@ -3,7 +3,7 @@
 #moj_import <minecraft:fog.glsl>
 #moj_import <minecraft:dynamictransforms.glsl>
 #moj_import <minecraft:projection.glsl>
-#moj_import <minecraft:globals.glsl>
+#moj_import <minecraft:sample_lightmap.glsl>
 
 in vec3 Position;
 in vec2 UV0;
@@ -48,7 +48,9 @@ void main() {
         // MARKER_POS values reach max ~(6,4). A 0.03 NDC quad covers ~19px at 720p.
         // Fragment shader uses gl_FragCoord to output at the exact target pixel.
         vec2 quadSize = vec2(0.03);
-        gl_Position = vec4(-1.0 + corners[gl_VertexID % 4] * quadSize, 0.0, 1.0);
+        // z=1.0: nearest depth under the reversed depth buffer used since 26.2,
+        // so the marker always passes the depth test.
+        gl_Position = vec4(-1.0 + corners[gl_VertexID % 4] * quadSize, 1.0, 1.0);
 
         sphericalVertexDistance = 0.0;
         cylindricalVertexDistance = 0.0;
@@ -62,5 +64,5 @@ void main() {
     sphericalVertexDistance = fog_spherical_distance(Position);
     cylindricalVertexDistance = fog_cylindrical_distance(Position);
     texCoord0 = UV0;
-    vertexColor = Color * texelFetch(Sampler2, UV2 / 16, 0);
+    vertexColor = Color * sample_lightmap(Sampler2, UV2);
 }

@@ -1,6 +1,6 @@
 {
   "pack": {
-    "pack_format": 81,
+    "pack_format": 88,
     "min_format": 70,
     "max_format": 9999,
     "description": "ShaderSelector v4,\nFork by JagerMeistars"

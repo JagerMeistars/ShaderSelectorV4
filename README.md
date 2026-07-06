@@ -142,7 +142,7 @@ The `<operation>` parameter controls how the channel's value follows the target:
 
 This framework is based on a [previous version](https://github.com/HalbFettKaese/ShaderSelectorV3). That version had been extracted into its own repository and popularized by [CloudWolfYT](https://github.com/CloudWolfYT) to create [ShaderSelectorV2](https://github.com/CloudWolfYT/ShaderSelectorV2). ShaderSelectorV3 was a complete rewrite, and V4 continues with these notable changes across versions:
 
-* V2 used the post shader format from before Minecraft 1.21.2; V3 was developed in 24w38a (a 1.21.2 snapshot); V4 targets 26.1.
+* V2 used the post shader format from before Minecraft 1.21.2; V3 was developed in 24w38a (a 1.21.2 snapshot); V4 targets 26.2 (updated from 26.1 for the reversed depth buffer introduced in 26.2).
 * The data sampler has a changed layout.
 * Interpolation counts in real time instead of frames (`rate` is in `units/second` instead of `units/frame`).
 * Every channel saves how much time passed since its target value was last changed.
