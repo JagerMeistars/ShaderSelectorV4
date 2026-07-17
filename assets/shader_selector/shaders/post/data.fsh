@@ -3,7 +3,10 @@
 #moj_import <shader_selector:marker_settings.glsl>
 #moj_import <shader_selector:utils.glsl>
 
-uniform sampler2D ParticlesSampler;
+// In 26.3 there is no longer a separate minecraft:particles post target (translucency
+// is composited engine-side via OIT). The marker particles are written as opaque pixels
+// straight into minecraft:main, so we read them back from there.
+uniform sampler2D MainSampler;
 uniform sampler2D DataSampler;
 
 #moj_import <minecraft:globals.glsl>
@@ -17,7 +20,7 @@ void manageTime() {
 }
 
 void readMarker(ivec2 iCoord, ivec2 pixelPos, float green, int op, float rate) {
-    ivec4 particleColor = ivec4(round(texelFetch(ParticlesSampler, pixelPos, 0)*255.));
+    ivec4 particleColor = ivec4(round(texelFetch(MainSampler, pixelPos, 0)*255.));
     if (particleColor.rga == ivec3(MARKER_RED, green, 255)) {
         if (iCoord.x == 0) {
             fragColor = vec4(MARKER_RED, op, particleColor.b, 255) / 255.;

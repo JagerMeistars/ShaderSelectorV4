@@ -14,7 +14,7 @@ shaderselector/
 └── assets/
     ├── minecraft/                                 # Переопределения ванильных файлов
     │   ├── post_effect/
-    │   │   └── transparency.json                  # Пайплайн пост-обработки (порядок проходов)
+    │   │   └── end_of_frame.json                  # Пайплайн пост-обработки (порядок проходов)
     │   └── shaders/core/
     │       ├── particle.vsh                       # Вершинный шейдер частиц (модифицирован)
     │       └── particle.fsh                       # Фрагментный шейдер частиц (модифицирован)
@@ -414,7 +414,8 @@ my_effects_datapack/
 ```json
 {
     "pack": {
-        "pack_format": 75,
+        "pack_format": 92,
+        "min_format": 92,
         "description": "Shader effects controller"
     }
 }
@@ -554,7 +555,7 @@ ARGB = 0xFBFE << 16 | green << 8 | value
     ADD_MARKER(MY_BLUR_CHANNEL, 250, 251, 1, 0.2)
 ```
 
-> **Важно:** При добавлении нового канала с номером 3 нужно увеличить data-текстуру. В `transparency.json` измените высоту `data` и `data_swap` с 3 на 4:
+> **Важно:** При добавлении нового канала с номером 3 нужно увеличить data-текстуру. В `end_of_frame.json` измените высоту `data` и `data_swap` с 3 на 4:
 > ```json
 > "data": {"width": 5, "height": 4, "persistent": true},
 > "data_swap": {"width": 5, "height": 4}
@@ -602,7 +603,7 @@ void main() {
 }
 ```
 
-### Шаг 3: Добавьте проход в transparency.json
+### Шаг 3: Добавьте проход в end_of_frame.json
 
 Добавьте новый проход в массив `passes` (перед финальным blit):
 
@@ -614,14 +615,14 @@ void main() {
     "inputs": [
         {
             "sampler_name": "Main",
-            "target": "swap"
+            "target": "clean"
         },
         {
             "sampler_name": "Data",
             "target": "data"
         }
     ],
-    "output": "final"
+    "output": "swap"
 }
 ```
 
@@ -638,7 +639,7 @@ execute as @a at @s run particle entity_effect{color:0xFBFEFAFF} ^ ^ ^2
 execute as @a at @s run particle entity_effect{color:0xFBFEFA00} ^ ^ ^2
 ```
 
-> **Совет:** Обратите внимание на `target` в transparency.json — это имена render target'ов. Вход вашего шейдера должен быть выходом предыдущего прохода. Выход — один из определенных target'ов (`final`, `swap`, `swap2`). Последний проход (blit) должен писать в `minecraft:main`.
+> **Совет:** Обратите внимание на `target` в end_of_frame.json — это имена render target'ов. Вход вашего шейдера должен быть выходом предыдущего прохода. Выход — один из определенных target'ов (`clean` = собранная сцена с убранными маркерами, `swap`, `swap2`). Последний проход (blit) должен писать в `minecraft:main`.
 
 ---
 
@@ -673,21 +674,22 @@ void main() {
 
 ---
 
-## Пайплайн рендеринга (transparency.json)
+## Пайплайн рендеринга (end_of_frame.json)
 
 Проходы выполняются последовательно:
 
 | # | Шейдер | Что делает | Вход | Выход |
 |---|--------|------------|------|-------|
 | 1 | `blit` | Копирует data-текстуру в swap | `data` | `data_swap` |
-| 2 | `data` | Читает маркеры из частиц, обновляет data | `data_swap` + `particles` | `data` |
-| 3 | `remove_particles` | Убирает маркеры из слоя частиц | `particles` | `swap` |
-| 4 | `transparency` | Стандартный ванильный проход прозрачности | все слои | `final` |
-| 5–10 | `box_blur` x6 | Многопроходное размытие (для примера) | `final`→`swap`→... | `swap2` |
-| 11 | `shader` | Применение эффектов (пример) | `final` + `data` + `swap2` | `swap` |
-| 12 | `blit` | Вывод результата на экран | `swap` | `minecraft:main` |
+| 2 | `data` | Читает маркеры из `minecraft:main`, обновляет data | `data_swap` + `minecraft:main` | `data` |
+| 3 | `remove_particles` | Убирает точки-маркеры из видимого кадра | `minecraft:main` | `clean` |
+| 4–9 | `box_blur` x6 | Многопроходное размытие (для примера) | `clean`→`swap`→... | `swap2` |
+| 10 | `shader` | Применение эффектов (пример) | `clean` + `data` + `swap2` | `swap` |
+| 11 | `blit` | Вывод результата на экран | `swap` | `minecraft:main` |
 
-> Проходы 1–4 — это **ядро ShaderSelector**, их не нужно трогать. Проходы 5–12 — пример, который можно заменить на свои эффекты.
+> Проходы 1–3 — это **ядро ShaderSelector**, их не нужно трогать. Проходы 4–11 — пример, который можно заменить на свои эффекты.
+>
+> **Замечание 26.3:** старого ванильного прохода `transparency` больше нет — прозрачность теперь собирается движком через OIT (order-independent transparency), и отдельного post-target `minecraft:particles` тоже нет. Фреймворк работает как всегда включённый post effect `minecraft:end_of_frame` и читает свои маркер-частицы обратно из `minecraft:main`, куда ядровый шейдер `particle` записал их как непрозрачные пиксели.
 
 ---
 
@@ -705,7 +707,7 @@ void main() {
 
 ## Ограничения и нюансы
 
-1. **Количество каналов** ограничено высотой data-текстуры. По умолчанию 3 строки = 2 канала (строка 0 — время). Для добавления каналов увеличивайте `height` в `transparency.json`.
+1. **Количество каналов** ограничено высотой data-текстуры. По умолчанию 3 строки = 2 канала (строка 0 — время). Для добавления каналов увеличивайте `height` в `end_of_frame.json`.
 
 2. **Диапазон значений:** Синий канал маркера (0–255) нормализуется:
    - Для операций 0, 1, 3: `value / 255.0` (0.0–1.0)
@@ -728,7 +730,7 @@ void main() {
 ### Добавить новый управляемый параметр:
 
 1. В `marker_settings.glsl`: определить `#define MY_CHANNEL N` и добавить `ADD_MARKER(...)` в `LIST_MARKERS`
-2. В `transparency.json`: увеличить `height` data-текстур если нужно
+2. В `end_of_frame.json`: увеличить `height` data-текстур если нужно
 3. В своем шейдере: `float value = readChannel(MY_CHANNEL);`
 4. Вычислить ARGB: `0xFBFE | (green_hex << 8) | value_hex` → `0xFBFE{GG}{BB}`
 5. В датапаке: `particle entity_effect{color:0xFBFE____} ^ ^ ^2`

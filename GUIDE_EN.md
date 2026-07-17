@@ -14,7 +14,7 @@ shaderselector/
 └── assets/
     ├── minecraft/                                 # Vanilla file overrides
     │   ├── post_effect/
-    │   │   └── transparency.json                  # Post-processing pipeline (pass order)
+    │   │   └── end_of_frame.json                  # Post-processing pipeline (pass order)
     │   └── shaders/core/
     │       ├── particle.vsh                       # Particle vertex shader (modified)
     │       └── particle.fsh                       # Particle fragment shader (modified)
@@ -403,7 +403,8 @@ my_effects_datapack/
 ```json
 {
     "pack": {
-        "pack_format": 75,
+        "pack_format": 92,
+        "min_format": 92,
         "description": "Shader effects controller"
     }
 }
@@ -537,7 +538,7 @@ In `marker_settings.glsl`, add new channels and markers:
     ADD_MARKER(MY_BLUR_CHANNEL, 250, 251, 1, 0.2)
 ```
 
-> **Important:** When adding a new channel with number 3, you need to increase the data texture size. In `transparency.json`, change the height of `data` and `data_swap` from 3 to 4:
+> **Important:** When adding a new channel with number 3, you need to increase the data texture size. In `end_of_frame.json`, change the height of `data` and `data_swap` from 3 to 4:
 > ```json
 > "data": {"width": 5, "height": 4, "persistent": true},
 > "data_swap": {"width": 5, "height": 4}
@@ -585,7 +586,7 @@ void main() {
 }
 ```
 
-### Step 3: Add a Pass to transparency.json
+### Step 3: Add a Pass to end_of_frame.json
 
 Add a new pass to the `passes` array (before the final blit):
 
@@ -597,14 +598,14 @@ Add a new pass to the `passes` array (before the final blit):
     "inputs": [
         {
             "sampler_name": "Main",
-            "target": "swap"
+            "target": "clean"
         },
         {
             "sampler_name": "Data",
             "target": "data"
         }
     ],
-    "output": "final"
+    "output": "swap"
 }
 ```
 
@@ -620,7 +621,7 @@ execute as @a at @s run particle entity_effect{color:-67175681} ^ ^ ^2
 execute as @a at @s run particle entity_effect{color:-67175936} ^ ^ ^2
 ```
 
-> **Tip:** Pay attention to `target` in transparency.json — these are render target names. Your shader's input must be the output of the previous pass. Output should be one of the defined targets (`final`, `swap`, `swap2`). The last pass (blit) must write to `minecraft:main`.
+> **Tip:** Pay attention to `target` in end_of_frame.json — these are render target names. Your shader's input must be the output of the previous pass. Output should be one of the defined targets (`clean` = the composited scene with markers removed, `swap`, `swap2`). The last pass (blit) must write to `minecraft:main`.
 
 ---
 
@@ -655,21 +656,22 @@ void main() {
 
 ---
 
-## Rendering Pipeline (transparency.json)
+## Rendering Pipeline (end_of_frame.json)
 
 Passes execute sequentially:
 
 | # | Shader | Purpose | Input | Output |
 |---|--------|---------|-------|--------|
 | 1 | `blit` | Copy data texture to swap | `data` | `data_swap` |
-| 2 | `data` | Read markers from particles, update data | `data_swap` + `particles` | `data` |
-| 3 | `remove_particles` | Remove markers from particle layer | `particles` | `swap` |
-| 4 | `transparency` | Standard vanilla transparency pass | all layers | `final` |
-| 5–10 | `box_blur` x6 | Multi-pass blur (for example) | `final`→`swap`→... | `swap2` |
-| 11 | `shader` | Apply effects (example) | `final` + `data` + `swap2` | `swap` |
-| 12 | `blit` | Output result to screen | `swap` | `minecraft:main` |
+| 2 | `data` | Read markers from `minecraft:main`, update data | `data_swap` + `minecraft:main` | `data` |
+| 3 | `remove_particles` | Remove marker dots from the visible frame | `minecraft:main` | `clean` |
+| 4–9 | `box_blur` x6 | Multi-pass blur (for example) | `clean`→`swap`→... | `swap2` |
+| 10 | `shader` | Apply effects (example) | `clean` + `data` + `swap2` | `swap` |
+| 11 | `blit` | Output result to screen | `swap` | `minecraft:main` |
 
-> Passes 1–4 are the **ShaderSelector core** — don't touch them. Passes 5–12 are examples that you can replace with your own effects.
+> Passes 1–3 are the **ShaderSelector core** — don't touch them. Passes 4–11 are examples that you can replace with your own effects.
+>
+> **26.3 note:** the old vanilla `transparency` composite pass is gone — translucency is now composited engine-side by OIT (order-independent transparency), and there is no longer a `minecraft:particles` post target. The framework runs as the always-on `minecraft:end_of_frame` post effect and reads its marker particles back out of `minecraft:main`, where the core `particle` shader wrote them as opaque pixels.
 
 ---
 
@@ -687,7 +689,7 @@ This will display the data texture contents in the top-left corner of the screen
 
 ## Limitations and Notes
 
-1. **Number of channels** is limited by the data texture height. By default, 3 rows = 2 channels (row 0 is time). To add channels, increase `height` in `transparency.json`.
+1. **Number of channels** is limited by the data texture height. By default, 3 rows = 2 channels (row 0 is time). To add channels, increase `height` in `end_of_frame.json`.
 
 2. **Value range:** The marker's blue channel (0–255) is normalized:
    - For operations 0, 1, 3: `value / 255.0` (0.0–1.0)
@@ -710,7 +712,7 @@ This will display the data texture contents in the top-left corner of the screen
 ### Add a new controllable parameter:
 
 1. In `marker_settings.glsl`: define `#define MY_CHANNEL N` and add `ADD_MARKER(...)` to `LIST_MARKERS`
-2. In `transparency.json`: increase data texture `height` if needed
+2. In `end_of_frame.json`: increase data texture `height` if needed
 3. In your shader: `float value = readChannel(MY_CHANNEL);`
 4. Compute ARGB: `-67239936 + green * 256 + value`
 5. In datapack: `particle entity_effect{color:<ARGB>} ^ ^ ^2`

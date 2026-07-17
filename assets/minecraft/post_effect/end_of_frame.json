@@ -1,0 +1,197 @@
+{
+    "_comment": "ShaderSelectorV4 pipeline. In 26.3 the vanilla transparency post-chain was removed (translucency is now composited engine-side via OIT), so the old post_effect/transparency.json hook is gone. Instead we define the minecraft:end_of_frame post effect, which the client always runs once per frame while this pack is loaded (before any /posteffect effects). minecraft:main already contains the fully composited scene, including the marker particles that core/particle.* wrote as opaque pixels near the top-left corner.",
+    "targets": {
+        "data": {"width": 5, "height": 3, "persistent": true},
+        "data_swap": {"width": 5, "height": 3},
+        "clean": {},
+        "swap": {},
+        "swap2": {}
+    },
+    "passes": [
+        {
+            "_comment": "Copy the persistent data buffer so the data pass can read the previous frame while writing the new one.",
+            "fragment_shader": "shader_selector:post/internal/blit",
+            "vertex_shader": "minecraft:core/screenquad",
+            "inputs": [
+                {
+                    "sampler_name": "In",
+                    "target": "data"
+                }
+            ],
+            "output": "data_swap"
+        },
+        {
+            "_comment": "Read the marker pixels out of minecraft:main and update the persistent data buffer.",
+            "fragment_shader": "shader_selector:post/data",
+            "vertex_shader": "minecraft:core/screenquad",
+            "inputs": [
+                {
+                    "sampler_name": "Data",
+                    "target": "data_swap"
+                },
+                {
+                    "sampler_name": "Main",
+                    "target": "minecraft:main"
+                }
+            ],
+            "output": "data"
+        },
+        {
+            "_comment": "Erase the marker pixels from the visible frame.",
+            "fragment_shader": "shader_selector:post/internal/remove_particles",
+            "vertex_shader": "minecraft:core/screenquad",
+            "inputs": [
+                {
+                    "sampler_name": "Main",
+                    "target": "minecraft:main"
+                }
+            ],
+            "output": "clean"
+        },
+        {
+            "_comment": "Build a blurred copy of the clean frame for the example shader from ShaderSelectorV3.",
+            "vertex_shader": "minecraft:core/screenquad",
+            "fragment_shader": "minecraft:post/box_blur",
+            "inputs": [
+                {
+                    "sampler_name": "In",
+                    "target": "clean",
+                    "bilinear": true
+                }
+            ],
+            "output": "swap",
+            "uniforms": {
+                "BlurConfig": [
+                    { "name": "BlurDir", "type": "vec2", "value": [ 1.0, 0.0 ] },
+                    { "name": "Radius", "type": "float", "value": 5.0 }
+                ]
+            }
+        },
+        {
+            "vertex_shader": "minecraft:core/screenquad",
+            "fragment_shader": "minecraft:post/box_blur",
+            "inputs": [
+                {
+                    "sampler_name": "In",
+                    "target": "swap",
+                    "bilinear": true
+                }
+            ],
+            "output": "swap2",
+            "uniforms": {
+                "BlurConfig": [
+                    { "name": "BlurDir", "type": "vec2", "value": [ 0.0, 1.0 ] },
+                    { "name": "Radius", "type": "float", "value": 5.0 }
+                ]
+            }
+        },
+        {
+            "vertex_shader": "minecraft:core/screenquad",
+            "fragment_shader": "minecraft:post/box_blur",
+            "inputs": [
+                {
+                    "sampler_name": "In",
+                    "target": "swap2",
+                    "bilinear": true
+                }
+            ],
+            "output": "swap",
+            "uniforms": {
+                "BlurConfig": [
+                    { "name": "BlurDir", "type": "vec2", "value": [ 1.0, 0.0 ] },
+                    { "name": "Radius", "type": "float", "value": 5.0 }
+                ]
+            }
+        },
+        {
+            "vertex_shader": "minecraft:core/screenquad",
+            "fragment_shader": "minecraft:post/box_blur",
+            "inputs": [
+                {
+                    "sampler_name": "In",
+                    "target": "swap",
+                    "bilinear": true
+                }
+            ],
+            "output": "swap2",
+            "uniforms": {
+                "BlurConfig": [
+                    { "name": "BlurDir", "type": "vec2", "value": [ 0.0, 1.0 ] },
+                    { "name": "Radius", "type": "float", "value": 5.0 }
+                ]
+            }
+        },
+        {
+            "vertex_shader": "minecraft:core/screenquad",
+            "fragment_shader": "minecraft:post/box_blur",
+            "inputs": [
+                {
+                    "sampler_name": "In",
+                    "target": "swap2",
+                    "bilinear": true
+                }
+            ],
+            "output": "swap",
+            "uniforms": {
+                "BlurConfig": [
+                    { "name": "BlurDir", "type": "vec2", "value": [ 1.0, 0.0 ] },
+                    { "name": "Radius", "type": "float", "value": 5.0 }
+                ]
+            }
+        },
+        {
+            "vertex_shader": "minecraft:core/screenquad",
+            "fragment_shader": "minecraft:post/box_blur",
+            "inputs": [
+                {
+                    "sampler_name": "In",
+                    "target": "swap",
+                    "bilinear": true
+                }
+            ],
+            "output": "swap2",
+            "uniforms": {
+                "BlurConfig": [
+                    { "name": "BlurDir", "type": "vec2", "value": [ 1.0, 0.0 ] },
+                    { "name": "Radius", "type": "float", "value": 5.0 }
+                ]
+            }
+        },
+        {
+            "_comment": "Run the example shader from ShaderSelectorV3.",
+            "fragment_shader": "shader_selector:post/shader",
+            "vertex_shader": "minecraft:core/screenquad",
+            "inputs": [
+                {
+                    "sampler_name": "Main",
+                    "target": "clean"
+                },
+                {
+                    "sampler_name": "Data",
+                    "target": "data"
+                },
+                {
+                    "sampler_name": "Blur",
+                    "target": "swap2"
+                }
+            ],
+            "output": "swap"
+        },
+        {
+            "vertex_shader": "minecraft:core/screenquad",
+            "fragment_shader": "minecraft:post/blit",
+            "inputs": [
+                {
+                    "sampler_name": "In",
+                    "target": "swap"
+                }
+            ],
+            "uniforms": {
+                "BlitConfig": [
+                    { "name": "ColorModulate", "type": "vec4", "value": [ 1.0, 1.0, 1.0, 1.0 ] }
+                ]
+            },
+            "output": "minecraft:main"
+        }
+    ]
+}

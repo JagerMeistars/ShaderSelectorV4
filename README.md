@@ -67,12 +67,12 @@ float rotation = readChannel(EXAMPLE_ROTATION_CHANNEL);   // 0.0 – 1.0
 
 ### How is a new channel defined?
 
-All a channel needs is space on the data buffer. The buffer size is set in the `targets` list of `assets/minecraft/post_effect/transparency.json`. In the example there are 2 channels plus the internal GameTime row, so `"height": 3` for both `data` and `data_swap` targets.
+All a channel needs is space on the data buffer. The buffer size is set in the `targets` list of `assets/minecraft/post_effect/end_of_frame.json`. In the example there are 2 channels plus the internal GameTime row, so `"height": 3` for both `data` and `data_swap` targets.
 
 To add a channel:
 
 1. In `marker_settings.glsl`, define a channel constant and add markers to `LIST_MARKERS`.
-2. In `transparency.json`, increase `height` of `data` and `data_swap`.
+2. In `end_of_frame.json`, increase `height` of `data` and `data_swap`.
 3. In your shader, read the value with `readChannel(MY_CHANNEL)`.
 
 ### How do I give an input to a channel?
@@ -142,11 +142,11 @@ The `<operation>` parameter controls how the channel's value follows the target:
 
 This framework is based on a [previous version](https://github.com/HalbFettKaese/ShaderSelectorV3). That version had been extracted into its own repository and popularized by [CloudWolfYT](https://github.com/CloudWolfYT) to create [ShaderSelectorV2](https://github.com/CloudWolfYT/ShaderSelectorV2). ShaderSelectorV3 was a complete rewrite, and V4 continues with these notable changes across versions:
 
-* V2 used the post shader format from before Minecraft 1.21.2; V3 was developed in 24w38a (a 1.21.2 snapshot); V4 targets 26.2 (updated from 26.1 for the reversed depth buffer introduced in 26.2).
+* V2 used the post shader format from before Minecraft 1.21.2; V3 was developed in 24w38a (a 1.21.2 snapshot); V4 targets 26.3-snapshot-4 (`pack_format` 92; updated from 26.2, which introduced the reversed depth buffer). In 26.3 the vanilla `post_effect/transparency.json` chain was replaced by engine-side OIT (order-independent transparency), so the framework now hooks the always-on `minecraft:end_of_frame` post effect and reads its marker particles back out of `minecraft:main` (the core `particle` shader was also ported to the new OIT branches).
 * The data sampler has a changed layout.
 * Interpolation counts in real time instead of frames (`rate` is in `units/second` instead of `units/frame`).
 * Every channel saves how much time passed since its target value was last changed.
 * Apart from constant-rate interpolation, there is accelerated motion interpolation.
 * Interpolation can use overflow (cyclic wrapping) for shortest-path transitions.
-* Adding/editing a channel only requires changing `marker_settings.glsl` and adjusting the data buffer height in `transparency.json`.
+* Adding/editing a channel only requires changing `marker_settings.glsl` and adjusting the data buffer height in `end_of_frame.json`.
 * Added `readChannel()` convenience function via `data_reader.glsl`.
