@@ -21,7 +21,13 @@ void manageTime() {
 
 void readMarker(ivec2 iCoord, ivec2 pixelPos, float green, int op, float rate) {
     ivec4 particleColor = ivec4(round(texelFetch(MainSampler, pixelPos, 0)*255.));
+    #if SS_MARKER_TOLERANCE
+    // OIT ±1: match signature channels with |diff|<=1 instead of exact ==
+    ivec3 markerDiff = abs(particleColor.rga - ivec3(MARKER_RED, green, 255));
+    if (markerDiff.x <= 1 && markerDiff.y <= 1 && markerDiff.z <= 1) {
+    #else
     if (particleColor.rga == ivec3(MARKER_RED, green, 255)) {
+    #endif
         if (iCoord.x == 0) {
             fragColor = vec4(MARKER_RED, op, particleColor.b, 255) / 255.;
             return;

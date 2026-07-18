@@ -113,6 +113,8 @@ This is the main configuration file. Here you define **channels** (each channel 
 
 **`MARKER_RED` (254)** — the red channel value that identifies a particle as a marker rather than a regular particle.
 
+**`SS_MARKER_TOLERANCE` (0)** — optional marker channel match tolerance; defaults to 0 (exact compare, behaviour unchanged), set to 1 to match signature channels with `|diff|<=1` — enable if marker channels stop working on 26.3 (OIT ±1 rounding).
+
 ### 2. Interpolation Operations (op)
 
 When you send a value through a marker, it doesn't necessarily apply instantly. The system supports smooth interpolation:

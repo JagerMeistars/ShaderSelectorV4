@@ -1,4 +1,9 @@
 
+// Optional marker channel tolerance (OFF by default = unchanged behaviour).
+// Set to 1 to match marker signature channels with |diff|<=1 per channel.
+// Enable on 26.3 if marker channels stop working due to OIT rounding (±1).
+#define SS_MARKER_TOLERANCE 0
+
 // define distinct values, counting from 1:
 #define EXAMPLE_GREYSCALE_CHANNEL 1
 #define EXAMPLE_ROTATION_CHANNEL 2
