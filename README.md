@@ -4,12 +4,6 @@ An easy framework for sending information to post processing shaders using comma
 
 Targets Minecraft **26.3 release**, resource format **97.1**.
 
-Offline validation (Java 25 and an installed PrismLauncher 26.3 client):
-```text
-python tools/validate.py ShaderSelectorV4-26.3.zip validation.log /path/to/PrismLauncher
-```
-Checks metadata, post-effect bindings, all shaders, and the three particle OIT phases. In-game rendering still needs verification.
-
 ## What is this used for?
 
 This resource pack includes a framework that lets commands communicate with post processing shaders, along with a simple example demonstrating how to use it.
