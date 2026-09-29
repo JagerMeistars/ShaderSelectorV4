@@ -16,22 +16,22 @@ If you want to try it out yourself, install the resource pack and run one of the
 
 ```mcfunction
 # Turn on greyscale
-/particle entity_effect{color:-67174913} ~ ~1 ~
+/particle entity_effect{color:0xFBFEFDFF} ~ ~1 ~
 
 # Turn off greyscale
-/particle entity_effect{color:-67175168} ~ ~1 ~
+/particle entity_effect{color:0xFBFEFD00} ~ ~1 ~
 
 # Rotate screen by 90° (instant)
-/particle entity_effect{color:-67175616} ~ ~1 ~
+/particle entity_effect{color:0xFBFEFB40} ~ ~1 ~
 
 # Rotate screen back to normal (instant)
-/particle entity_effect{color:-67175680} ~ ~1 ~
+/particle entity_effect{color:0xFBFEFB00} ~ ~1 ~
 
 # Rotate screen to 180° (smooth with acceleration)
-/particle entity_effect{color:-67175296} ~ ~1 ~
+/particle entity_effect{color:0xFBFEFC80} ~ ~1 ~
 
 # Rotate screen back to normal (smooth)
-/particle entity_effect{color:-67175424} ~ ~1 ~
+/particle entity_effect{color:0xFBFEFC00} ~ ~1 ~
 ```
 
 The good thing about everything being controlled through particles is that the `/particle` command has an argument that lets you determine which players are able to see a particle.
@@ -100,7 +100,7 @@ ARGB = -67239936 + green * 256 + value
 For example, to set greyscale (green=253) to 100% (value=255):
 ```
 ARGB = -67239936 + 253 * 256 + 255 = -67174913
-/particle entity_effect{color:-67174913} ~ ~1 ~
+/particle entity_effect{color:0xFBFEFDFF} ~ ~1 ~
 ```
 
 ### Operations
@@ -131,14 +131,14 @@ The `<operation>` parameter controls how the channel's value follows the target:
 
 | Action | Command |
 |--------|---------|
-| Greyscale ON | `particle entity_effect{color:-67174913} ~ ~1 ~` |
-| Greyscale OFF | `particle entity_effect{color:-67175168} ~ ~1 ~` |
-| Greyscale 50% | `particle entity_effect{color:-67175040} ~ ~1 ~` |
-| Rotation SET 0° | `particle entity_effect{color:-67175680} ~ ~1 ~` |
-| Rotation SET 90° | `particle entity_effect{color:-67175616} ~ ~1 ~` |
-| Rotation SET 180° | `particle entity_effect{color:-67175552} ~ ~1 ~` |
-| Rotation SMOOTH 180° | `particle entity_effect{color:-67175296} ~ ~1 ~` |
-| Rotation SMOOTH 0° | `particle entity_effect{color:-67175424} ~ ~1 ~` |
+| Greyscale ON | `particle entity_effect{color:0xFBFEFDFF} ~ ~1 ~` |
+| Greyscale OFF | `particle entity_effect{color:0xFBFEFD00} ~ ~1 ~` |
+| Greyscale 50% | `particle entity_effect{color:0xFBFEFD80} ~ ~1 ~` |
+| Rotation SET 0° | `particle entity_effect{color:0xFBFEFB00} ~ ~1 ~` |
+| Rotation SET 90° | `particle entity_effect{color:0xFBFEFB40} ~ ~1 ~` |
+| Rotation SET 180° | `particle entity_effect{color:0xFBFEFB80} ~ ~1 ~` |
+| Rotation SMOOTH 180° | `particle entity_effect{color:0xFBFEFC80} ~ ~1 ~` |
+| Rotation SMOOTH 0° | `particle entity_effect{color:0xFBFEFC00} ~ ~1 ~` |
 
 ## History
 
