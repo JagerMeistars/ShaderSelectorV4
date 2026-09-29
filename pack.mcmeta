@@ -1,8 +1,13 @@
 {
   "pack": {
-    "pack_format": 92,
-    "min_format": 92,
-    "max_format": 9999,
-    "description": "ShaderSelector v4,\nFork by JagerMeistars"
+    "min_format": [
+      97,
+      1
+    ],
+    "max_format": [
+      97,
+      1
+    ],
+    "description": "ShaderSelector v4 — Minecraft 26.3\nFork by JagerMeistars"
   }
 }

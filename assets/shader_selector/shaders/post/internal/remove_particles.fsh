@@ -1,6 +1,7 @@
 #version 330
+#extension GL_ARB_separate_shader_objects : require
 
-#moj_import <shader_selector:marker_settings.glsl>
+#include <shader_selector:marker_settings.glsl>
 
 // Reads minecraft:main (which now contains the composited marker pixels) and hides the
 // tiny marker dots by replacing them with their right-hand neighbour before display.
@@ -11,9 +12,9 @@ layout(std140) uniform SamplerInfo {
     vec2 InSize;
 };
 
-in vec2 texCoord;
+layout(location = 0) in vec2 texCoord;
 
-out vec4 fragColor;
+layout(location = 0) out vec4 fragColor;
 
 void main() {
     ivec2 iCoord = ivec2(gl_FragCoord.xy);

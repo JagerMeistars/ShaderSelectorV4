@@ -416,7 +416,8 @@ my_effects_datapack/
 ```json
 {
     "pack": {
-        "pack_format": 92,
+        "min_format": [97, 1],
+        "max_format": [97, 1],
         "min_format": 92,
         "description": "Shader effects controller"
     }
@@ -569,6 +570,7 @@ ARGB = 0xFBFE << 16 | green << 8 | value
 
 ```glsl
 #version 330
+#extension GL_ARB_separate_shader_objects : require
 
 uniform sampler2D MainSampler;   // Основное изображение
 uniform sampler2D DataSampler;   // Data-текстура с значениями каналов
@@ -578,12 +580,12 @@ layout(std140) uniform SamplerInfo {
     vec2 InSize;
 };
 
-#moj_import <shader_selector:marker_settings.glsl>
-#moj_import <shader_selector:utils.glsl>
-#moj_import <shader_selector:data_reader.glsl>
+#include <shader_selector:marker_settings.glsl>
+#include <shader_selector:utils.glsl>
+#include <shader_selector:data_reader.glsl>
 
-in vec2 texCoord;
-out vec4 fragColor;
+layout(location = 0) in vec2 texCoord;
+layout(location = 0) out vec4 fragColor;
 
 void main() {
     // Читаем значение канала (от 0.0 до 1.0)
@@ -741,16 +743,17 @@ void main() {
 
 ```glsl
 #version 330
+#extension GL_ARB_separate_shader_objects : require
 
 uniform sampler2D MainSampler;
 uniform sampler2D DataSampler;
 
-#moj_import <shader_selector:marker_settings.glsl>
-#moj_import <shader_selector:utils.glsl>
-#moj_import <shader_selector:data_reader.glsl>
+#include <shader_selector:marker_settings.glsl>
+#include <shader_selector:utils.glsl>
+#include <shader_selector:data_reader.glsl>
 
-in vec2 texCoord;
-out vec4 fragColor;
+layout(location = 0) in vec2 texCoord;
+layout(location = 0) out vec4 fragColor;
 
 void main() {
     float myValue = readChannel(MY_CHANNEL);

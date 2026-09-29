@@ -405,7 +405,8 @@ my_effects_datapack/
 ```json
 {
     "pack": {
-        "pack_format": 92,
+        "min_format": [97, 1],
+        "max_format": [97, 1],
         "min_format": 92,
         "description": "Shader effects controller"
     }
@@ -552,6 +553,7 @@ Create a file in `assets/shader_selector/shaders/post/`, e.g. `my_effect.fsh`:
 
 ```glsl
 #version 330
+#extension GL_ARB_separate_shader_objects : require
 
 uniform sampler2D MainSampler;   // Main image
 uniform sampler2D DataSampler;   // Data texture with channel values
@@ -561,12 +563,12 @@ layout(std140) uniform SamplerInfo {
     vec2 InSize;
 };
 
-#moj_import <shader_selector:marker_settings.glsl>
-#moj_import <shader_selector:utils.glsl>
-#moj_import <shader_selector:data_reader.glsl>
+#include <shader_selector:marker_settings.glsl>
+#include <shader_selector:utils.glsl>
+#include <shader_selector:data_reader.glsl>
 
-in vec2 texCoord;
-out vec4 fragColor;
+layout(location = 0) in vec2 texCoord;
+layout(location = 0) out vec4 fragColor;
 
 void main() {
     // Read channel value (from 0.0 to 1.0)
@@ -723,16 +725,17 @@ This will display the data texture contents in the top-left corner of the screen
 
 ```glsl
 #version 330
+#extension GL_ARB_separate_shader_objects : require
 
 uniform sampler2D MainSampler;
 uniform sampler2D DataSampler;
 
-#moj_import <shader_selector:marker_settings.glsl>
-#moj_import <shader_selector:utils.glsl>
-#moj_import <shader_selector:data_reader.glsl>
+#include <shader_selector:marker_settings.glsl>
+#include <shader_selector:utils.glsl>
+#include <shader_selector:data_reader.glsl>
 
-in vec2 texCoord;
-out vec4 fragColor;
+layout(location = 0) in vec2 texCoord;
+layout(location = 0) out vec4 fragColor;
 
 void main() {
     float myValue = readChannel(MY_CHANNEL);

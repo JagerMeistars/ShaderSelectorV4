@@ -1,7 +1,8 @@
 #version 330
+#extension GL_ARB_separate_shader_objects : require
 
-#moj_import <shader_selector:marker_settings.glsl>
-#moj_import <shader_selector:utils.glsl>
+#include <shader_selector:marker_settings.glsl>
+#include <shader_selector:utils.glsl>
 
 // In 26.3 there is no longer a separate minecraft:particles post target (translucency
 // is composited engine-side via OIT). The marker particles are written as opaque pixels
@@ -9,9 +10,9 @@
 uniform sampler2D MainSampler;
 uniform sampler2D DataSampler;
 
-#moj_import <minecraft:globals.glsl>
+#include <minecraft:globals.glsl>
 
-out vec4 fragColor;
+layout(location = 0) out vec4 fragColor;
 
 float deltaTime;
 
@@ -22,7 +23,7 @@ void manageTime() {
 void readMarker(ivec2 iCoord, ivec2 pixelPos, float green, int op, float rate) {
     ivec4 particleColor = ivec4(round(texelFetch(MainSampler, pixelPos, 0)*255.));
     #if SS_MARKER_TOLERANCE
-    // OIT ±1: match signature channels with |diff|<=1 instead of exact ==
+    // OIT В±1: match signature channels with |diff|<=1 instead of exact ==
     ivec3 markerDiff = abs(particleColor.rga - ivec3(MARKER_RED, green, 255));
     if (markerDiff.x <= 1 && markerDiff.y <= 1 && markerDiff.z <= 1) {
     #else
@@ -43,7 +44,7 @@ void readMarker(ivec2 iCoord, ivec2 pixelPos, float green, int op, float rate) {
             return;
         }
         if (iCoord.x == 1) {
-            
+
             if (previousColor.b == particleColor.b) {
                 return;
             }
@@ -71,14 +72,14 @@ void acceleratedMotion(ivec2 iCoord, int op, float targetValue) {
         return;
     }
     // If breaking at full force doesn't overshoot, keep accelerating.
-    // question: is extremum of x(t)=-a/2 * (t - t0)² + v * (t - t0) larger than dx?
+    // question: is extremum of x(t)=-a/2 * (t - t0)ВІ + v * (t - t0) larger than dx?
     // -a (t - t0) + v = 0
     // t = v/a + t0
-    // extremum: -a/2 * (v/a)² + v * (v/a)
-    // = 1/2 * v²/a
+    // extremum: -a/2 * (v/a)ВІ + v * (v/a)
+    // = 1/2 * vВІ/a
     // Check becomes:
-    // 1/2 * v²/a < dx
-    // 1/2 * v²/a - dx < 0
+    // 1/2 * vВІ/a < dx
+    // 1/2 * vВІ/a - dx < 0
     float sv = v > 0.0 ? 1.0 : -1.0;
     // if v points against dx, always decelerate
     if (sv * sign(dx) == -1.0) {
@@ -96,8 +97,8 @@ void acceleratedMotion(ivec2 iCoord, int op, float targetValue) {
         return;
     }
     // iCoord.x is 4
-    // x(t) = +-a/2 * (t - t0)² + v * (t - t0) + f(t0)
-    //      = +-a/2 * deltaTime² + v *deltaTime + x0
+    // x(t) = +-a/2 * (t - t0)ВІ + v * (t - t0) + f(t0)
+    //      = +-a/2 * deltaTimeВІ + v *deltaTime + x0
     x += (a*0.5 * deltaTime + v)*deltaTime;
     if (op == 4) {
         x = fract(x);
@@ -190,7 +191,7 @@ void main() {
                 // set speed to 0
                 fragColor = encodeFloat(0.0);
                 return;
-            } 
+            }
             // iCoord.x is 4
             fragColor = encodeFloat(targetValue);
             return;

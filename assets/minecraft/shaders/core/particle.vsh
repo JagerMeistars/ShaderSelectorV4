@@ -1,28 +1,29 @@
 #version 330
+#extension GL_ARB_separate_shader_objects : require
 
-#moj_import <minecraft:fog.glsl>
-#moj_import <minecraft:dynamictransforms.glsl>
-#moj_import <minecraft:projection.glsl>
-#moj_import <minecraft:sample_lightmap.glsl>
+#include <minecraft:fog.glsl>
+#include <minecraft:dynamictransforms.glsl>
+#include <minecraft:projection.glsl>
+#include <minecraft:sample_lightmap.glsl>
 
-in vec3 Position;
-in vec2 UV0;
-in vec4 Color;
-in ivec2 UV2;
+layout(location = 0) in vec3 Position;
+layout(location = 1) in vec2 UV0;
+layout(location = 2) in vec4 Color;
+layout(location = 3) in ivec2 UV2;
 
 uniform sampler2D Sampler2;
 
-out float sphericalVertexDistance;
-out float cylindricalVertexDistance;
-out vec2 texCoord0;
-out vec4 vertexColor;
+layout(location = 0) out float sphericalVertexDistance;
+layout(location = 1) out float cylindricalVertexDistance;
+layout(location = 2) out vec2 texCoord0;
+layout(location = 3) out vec4 vertexColor;
 
 // ShaderSelector
-#moj_import <shader_selector:marker_settings.glsl>
+#include <shader_selector:marker_settings.glsl>
 
-flat out int isMarker;
-flat out ivec4 iColor;
-flat out ivec2 markerPixel;
+layout(location = 4) flat out int isMarker;
+layout(location = 5) flat out ivec4 iColor;
+layout(location = 6) flat out ivec2 markerPixel;
 
 vec2[] corners = vec2[](
     vec2(0.0, 1.0),
@@ -50,7 +51,7 @@ void main() {
         vec2 quadSize = vec2(0.03);
         // z=1.0: nearest depth under the reversed depth buffer used since 26.2,
         // so the marker always passes the depth test.
-        gl_Position = vec4(-1.0 + corners[gl_VertexID % 4] * quadSize, 1.0, 1.0);
+        gl_Position = vec4(-1.0 + corners[gl_VertexIndex % 4] * quadSize, 1.0, 1.0);
 
         sphericalVertexDistance = 0.0;
         cylindricalVertexDistance = 0.0;

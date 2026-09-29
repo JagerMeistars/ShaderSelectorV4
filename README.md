@@ -2,6 +2,14 @@
 
 An easy framework for sending information to post processing shaders using commands in Minecraft.
 
+Targets Minecraft **26.3 release**, resource format **97.1**.
+
+Offline validation (Java 25 and an installed PrismLauncher 26.3 client):
+```text
+python tools/validate.py ShaderSelectorV4-26.3.zip validation.log /path/to/PrismLauncher
+```
+Checks metadata, post-effect bindings, all shaders, and the three particle OIT phases. In-game rendering still needs verification.
+
 ## What is this used for?
 
 This resource pack includes a framework that lets commands communicate with post processing shaders, along with a simple example demonstrating how to use it.
@@ -34,11 +42,11 @@ If you want to try it out yourself, install the resource pack and run one of the
 
 The good thing about everything being controlled through particles is that the `/particle` command has an argument that lets you determine which players are able to see a particle.
 
-> For a detailed guide (in Russian) on how everything works and how to write your own effects, see [GUIDE.md](GUIDE.md).
+> For a detailed guide (in Russian) on how everything works and how to write your own effects, see [RU-GUIDE.md](RU-GUIDE.md).
 
 ## How does this work?
 
-At its core, this framework is structured around a persistent data buffer defined in the `transparency` post effect pipeline. This buffer saves inputs given through commands and processes them to produce interpolated output values. The number of channels and how they are used can be changed, but in the given example the data buffer looks like this:
+At its core, this framework is structured around a persistent data buffer defined in the `end_of_frame` post effect pipeline. This buffer saves inputs given through commands and processes them to produce interpolated output values. The number of channels and how they are used can be changed, but in the given example the data buffer looks like this:
 
 ```
 Column:      0              1              2              3              4
@@ -142,7 +150,7 @@ The `<operation>` parameter controls how the channel's value follows the target:
 
 This framework is based on a [previous version](https://github.com/HalbFettKaese/ShaderSelectorV3). That version had been extracted into its own repository and popularized by [CloudWolfYT](https://github.com/CloudWolfYT) to create [ShaderSelectorV2](https://github.com/CloudWolfYT/ShaderSelectorV2). ShaderSelectorV3 was a complete rewrite, and V4 continues with these notable changes across versions:
 
-* V2 used the post shader format from before Minecraft 1.21.2; V3 was developed in 24w38a (a 1.21.2 snapshot); V4 targets 26.3-snapshot-4 (`pack_format` 92; updated from 26.2, which introduced the reversed depth buffer). In 26.3 the vanilla `post_effect/transparency.json` chain was replaced by engine-side OIT (order-independent transparency), so the framework now hooks the always-on `minecraft:end_of_frame` post effect and reads its marker particles back out of `minecraft:main` (the core `particle` shader was also ported to the new OIT branches).
+* V2 used the post shader format from before Minecraft 1.21.2; V3 was developed in 24w38a (a 1.21.2 snapshot); V4 targets 26.3 release (resource format 97.1; updated from 26.2, which introduced the reversed depth buffer). In 26.3 the vanilla `post_effect/transparency.json` chain was replaced by engine-side OIT (order-independent transparency), so the framework now hooks the always-on `minecraft:end_of_frame` post effect and reads its marker particles back out of `minecraft:main` (the core `particle` shader was also ported to the new OIT branches).
 * The data sampler has a changed layout.
 * Interpolation counts in real time instead of frames (`rate` is in `units/second` instead of `units/frame`).
 * Every channel saves how much time passed since its target value was last changed.
