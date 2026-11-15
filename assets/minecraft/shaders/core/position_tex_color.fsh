@@ -7,12 +7,12 @@ uniform sampler2D Sampler0;
 
 layout(location = 0) in vec2 texCoord0;
 layout(location = 1) in vec4 vertexColor;
-layout(location = 2) flat in int isPerspective;
-
-layout(location = 0) out vec4 fragColor;
 
 // ShaderSelector
 #include <shader_selector:marker_settings.glsl>
+layout(location = 2) flat in int isPerspective;
+
+layout(location = 0) out vec4 fragColor;
 
 void main() {
     // ShaderSelector
