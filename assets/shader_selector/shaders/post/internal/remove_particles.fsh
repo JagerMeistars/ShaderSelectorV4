@@ -17,11 +17,12 @@ layout(location = 0) in vec2 texCoord;
 layout(location = 0) out vec4 fragColor;
 
 void main() {
+    // Note: Removed check for precise iColor since any candidate marker pixel could have 3D overlays removed
     ivec2 iCoord = ivec2(gl_FragCoord.xy);
     fragColor = texture(MainSampler, texCoord);
-    ivec4 iColor = ivec4(round(fragColor * 255.));
+    // ivec4 iColor = ivec4(round(fragColor * 255.));
     if (false
-        #define ADD_MARKER(i, green, alpha, op, r) || MARKER_POS(i) == iCoord && iColor.rga == ivec3(MARKER_RED, green, 255)
+        #define ADD_MARKER(i, green, alpha, op, r) || MARKER_POS(i) == iCoord // && iColor.rga == ivec3(MARKER_RED, green, 255)
         LIST_MARKERS
     ) {
         fragColor = texture(MainSampler, texCoord + vec2(1./OutSize.x, 0.0));
