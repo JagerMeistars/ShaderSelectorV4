@@ -10,6 +10,8 @@ layout(location = 2) in vec4 Color;
 
 layout(location = 0) out vec2 texCoord0;
 layout(location = 1) out vec4 vertexColor;
+
+// ShaderSelector
 layout(location = 2) flat out int isPerspective;
 
 void main() {
